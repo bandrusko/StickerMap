@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+
+    <meta name="viewport"
+        content="initial-scale=1, maximum-scale=1, user-scalable=no" />
+
+    <title>Sticker Finder Map</title>
+
+    <!-- ArcGIS CSS -->
+    <link rel="stylesheet"
+        href="https://js.arcgis.com/4.26/esri/themes/dark/main.css" />
+
+    <!-- ArcGIS JS API -->
+    <script src="https://js.arcgis.com/4.26/"></script>
+
+    <style>
+        /* GENERAL PAGE STYLING */
+
+        html,
+        body,
+        #viewDiv {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        /* ADD RECORD BUTTON */
+
+        .addRecordBtn {
+            position: absolute;
+            z-index: 10;
+            top: 10px;
+            right: 10px;
+
+            background-color: #0079c1;
+            color: white;
+
+            padding: 8px 16px;
+
+            border: none;
+            border-radius: 6px;
+
+            font-size: 14px;
+
+            cursor: pointer;
+            text-decoration: none;
+
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .addRecordBtn:hover {
+            background-color: #005a87;
+        }
+
+        /* SEARCH BAR */
+
+        #searchDiv {
+            position: absolute;
+
+            top: 10px;
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            z-index: 10;
+
+            width: 320px;
+        }
+
+        /* COORDINATES DISPLAY */
+
+        #coords {
+            position: absolute;
+
+            bottom: 10px;
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            z-index: 10;
+
+            background: rgba(0, 0, 0, 0.75);
+
+            color: white;
+
+            padding: 6px 12px;
+
+            border-radius: 6px;
+
+            font-family: monospace;
+            font-size: 13px;
+
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.4);
+        }
+
+        /* DISCLAIMER MODAL */
+
+        #disclaimerModal {
+            position: fixed;
+
+            z-index: 9999;
+
+            left: 0;
+            top: 0;
+
+            width: 100%;
+            height: 100%;
+
+            background: rgba(0, 0, 0, 0.75);
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #disclaimerContent {
+            background: #1e1e1e;
+
+            color: white;
+
+            padding: 30px;
+
+            border-radius: 12px;
+
+            width: 90%;
+            max-width: 500px;
+
+            text-align: center;
+
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #disclaimerContent h2 {
+            margin-top: 0;
+        }
+
+        #closeDisclaimer {
+            margin-top: 20px;
+
+            background: #0079c1;
+            color: white;
+
+            border: none;
+
+            padding: 10px 20px;
+
+            border-radius: 6px;
+
+            cursor: pointer;
+
+            font-size: 15px;
+        }
+
+        #closeDisclaimer:hover {
+            background: #005a87;
+        }
+
+        /* MOBILE RESPONSIVE */
+
+        @media (max-width: 600px) {
+
+            #searchDiv {
+                width: 80%;
+                left: 10%;
+                transform: none;
+                top: 60px;
+            }
+
+            .addRecordBtn {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+
+            #coords {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- DISCLAIMER MODAL -->
+
+    <div id="disclaimerModal">
+
+        <div id="disclaimerContent">
+
+            <h2>Sticker Map Disclaimer</h2>
+
+            <p>
+                Please be respectful and mindful when locating
+                or placing stickers.
+            </p>
+
+            <p>
+                Respect private property, local laws,
+                and public spaces while exploring sticker locations.
+            </p>
+
+            <button id="closeDisclaimer">
+                Enter Map
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- ADD RECORD BUTTON -->
+
+    <a href="https://arcg.is/1Srm9v0"
+        target="_blank"
+        class="addRecordBtn">
+
+        Add Sticker
+
+    </a>
+
+    <!-- SEARCH -->
+
+    <div id="searchDiv"></div>
+
+    <!-- MAP -->
+
+    <div id="viewDiv"></div>
+
+    <!-- COORDINATES -->
+
+    <div id="coords">
+        Lon: 0.0000 | Lat: 0.0000
+    </div>
+
+    <script>
+
+        require([
+            "esri/WebMap",
+            "esri/views/MapView",
+            "esri/widgets/Locate",
+            "esri/widgets/BasemapGallery",
+            "esri/widgets/Expand",
+            "esri/widgets/Search",
+            "esri/widgets/Legend"
+        ], (
+            WebMap,
+            MapView,
+            Locate,
+            BasemapGallery,
+            Expand,
+            Search,
+            Legend
+        ) => {
+
+            // WEBMAP
+
+            const webmap = new WebMap({
+                portalItem: {
+                    id: "b56264b4094d40cd812b7c843fe9b21c"
+                }
+            });
+
+            webmap.basemap = "hybrid";
+
+            // MAP VIEW
+
+            const view = new MapView({
+                container: "viewDiv",
+                map: webmap,
+                center: [-98.35, 39.5],
+                zoom: 5
+            });
+
+            // LOCATE BUTTON
+
+            const locateBtn = new Locate({
+                view
+            });
+
+            view.ui.add(locateBtn, "top-left");
+
+            // BASEMAP GALLERY
+
+            const basemapGallery = new BasemapGallery({
+                view
+            });
+
+            const bgExpand = new Expand({
+                view,
+                content: basemapGallery,
+                expandIcon: "basemap",
+                expandTooltip: "Change basemap"
+            });
+
+            view.ui.add(bgExpand, "bottom-right");
+
+            // SEARCH
+
+            const searchWidget = new Search({
+                view: view,
+                container: "searchDiv"
+            });
+
+            // LEGEND
+
+            const legend = new Legend({
+                view: view,
+                style: "classic",
+                respectLayerVisibility: true
+            });
+
+            const legendExpand = new Expand({
+                view,
+                content: legend,
+                expandIcon: "legend",
+                expandTooltip: "Map Legend",
+                expanded: false
+            });
+
+            view.ui.add(legendExpand, "bottom-left");
+
+            // COORDINATES
+
+            const coordsDiv = document.getElementById("coords");
+
+            view.on("pointer-move", function (evt) {
+
+                const point = view.toMap({
+                    x: evt.x,
+                    y: evt.y
+                });
+
+                if (point) {
+
+                    coordsDiv.innerHTML =
+                        `Lon: ${point.longitude.toFixed(4)} | ` +
+                        `Lat: ${point.latitude.toFixed(4)}`;
+
+                }
+
+            });
+
+            // POPUPS + PHOTOS
+
+            view.when(() => {
+
+                webmap.layers.forEach(layer => {
+
+                    layer.popupEnabled = true;
+
+                    layer.popupTemplate = {
+
+                        title: "{Name}",
+
+                        content: [
+
+                            {
+                                type: "fields",
+
+                                fieldInfos: [
+                                    {
+                                        fieldName: "Description",
+                                        label: "Description"
+                                    },
+                                    {
+                                        fieldName: "Creator",
+                                        label: "Submitted By"
+                                    }
+                                ]
+                            },
+
+                            {
+                                type: "attachments"
+                            }
+
+                        ]
+                    };
+
+                });
+
+            });
+
+            // OPTIONAL HOVER POPUPS
+
+            view.on("pointer-move", async (event) => {
+
+                const hit = await view.hitTest(event);
+
+                const results = hit.results.filter(result =>
+                    result.graphic.layer.type === "feature"
+                );
+
+                if (results.length > 0) {
+
+                    const graphic = results[0].graphic;
+
+                    view.popup.open({
+                        location: graphic.geometry,
+                        features: [graphic]
+                    });
+
+                }
+
+            });
+
+        });
+
+        // DISCLAIMER CLOSE BUTTON
+
+        document.addEventListener("DOMContentLoaded", () => {
+
+            const modal =
+                document.getElementById("disclaimerModal");
+
+            document
+                .getElementById("closeDisclaimer")
+                .addEventListener("click", () => {
+
+                    modal.style.display = "none";
+
+                });
+
+        });
+
+    </script>
+
+</body>
+
+</html>
